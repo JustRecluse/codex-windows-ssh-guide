@@ -1,0 +1,29 @@
+#!/bin/bash
+# pkill shim: 处理 Codex app-server 的清理；其余情况返回 1（与原 pkill 未命中一致）
+#
+# 背景：Git Bash 自带的 MSYS 环境没有 pkill。而 Codex 桌面端的远端引导脚本里
+# 有一句 `pkill -9 -U "$uid" -f "codex.*[d]esktop-ssh-websocket-v0.sock" || true`，
+# 缺了它，旧的 app-server 会继续占用 control socket 和 app-server.log，
+# 导致后续 `: > app-server.log` 报 "Device or resource busy"。
+#
+# 注意：传给 powershell.exe 的路径必须用正斜杠，否则 MSYS 会吃掉反斜杠。
+
+pat=""
+prev=""
+for a in "$@"; do
+  if [ "$prev" = "-f" ]; then pat="$a"; fi
+  prev="$a"
+done
+
+case "$pat" in
+  # 桌面端实际传的模式里没有 "app-server"，只有 codex / desktop-ssh，所以三个都匹配
+  *codex*|*app-server*|*desktop-ssh*)
+    script="$(cygpath -m "$HOME")/codex-shims/kill-appserver.ps1"
+    /c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe \
+      -NoProfile -ExecutionPolicy Bypass -File "$script" >/dev/null 2>&1
+    exit $?
+    ;;
+  *)
+    exit 1
+    ;;
+esac

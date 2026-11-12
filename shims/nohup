@@ -1,0 +1,11 @@
+#!/bin/bash
+# nohup shim: 只写一个启动请求（瞬时完成，不受 ssh 会话回收影响），由常驻 watcher 真正拉起 app-server
+case "$*" in
+  *app-server*--listen*)
+    touch "$HOME/.codex/app-server-control/start-request" 2>/dev/null
+    exit 0
+    ;;
+  *)
+    exec /usr/bin/nohup.real "$@"
+    ;;
+esac
